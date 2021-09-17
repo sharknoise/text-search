@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "text-search"
+version = "0.1.0"
+description = ""
+authors = ["sharknoise <sharknoise@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pandas = "^1.3.3"
+Flask = "^2.0.1"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.9.2"
+isort = "^5.9.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

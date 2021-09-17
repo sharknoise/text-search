@@ -1,0 +1,11 @@
+*.pyc
+*.DS_Store
+__pycache__
+posts.csv
+.vscode
+*.egg-info
+dist/
+coverage.xml
+.coverage
+.venv
+.env
