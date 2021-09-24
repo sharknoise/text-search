@@ -8,6 +8,9 @@ authors = ["sharknoise <sharknoise@gmail.com>"]
 python = "^3.9"
 pandas = "^1.3.3"
 Flask = "^2.0.1"
+psycopg2-binary = "^2.9.1"
+elasticsearch = "^7.15.0"
+python-dotenv = "^0.19.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.9.2"
