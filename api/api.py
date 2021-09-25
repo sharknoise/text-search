@@ -1,9 +1,9 @@
 from datetime import datetime
 from os import getenv
 
+import elasticsearch
 import psycopg2
 from dotenv import load_dotenv
-from elasticsearch import Elasticsearch
 from flask import Flask, g
 from flask_restx import Api, Resource
 
@@ -18,7 +18,7 @@ ES_URL = getenv('ES_URL')
 app = Flask(__name__)
 api = Api(app)
 
-es = Elasticsearch(ES_URL)
+es = elasticsearch.Elasticsearch(ES_URL)
 
 
 def connect_pg():
@@ -49,13 +49,17 @@ def close_pg(error):
         g.pg_connection.close()
 
 
-@api.route('/posts/<post_id>')
+@api.route('/posts/<int:post_id>')
+@api.response(404, 'Post not found')
+@api.response(200, 'Success')
 class DataEntry(Resource):
     def get(self, post_id):
         """Get the Postgres record by id."""
         pg_cursor = get_pg_cursor()
         pg_cursor.execute('SELECT * FROM posts WHERE id = %s', [post_id])
         row = pg_cursor.fetchone()
+        if row is None:
+            return {'post not found': post_id}, 404
         prepared_row = []
         for element in row:
             if isinstance(element, datetime):
@@ -67,8 +71,11 @@ class DataEntry(Resource):
     def delete(self, post_id):
         """Delete the Postgres record and its ES document by id."""
         pg_cursor = get_pg_cursor()
-        pg_cursor.execute('DELETE FROM posts WHERE id = %s', [post_id])
-        es.delete(index='posts', id=post_id)
+        try:
+            es.delete(index='posts', id=post_id)
+            pg_cursor.execute('DELETE FROM posts WHERE id = %s', [post_id])
+        except elasticsearch.exceptions.NotFoundError:
+            return {'post not found': post_id}, 404
         return {'post deleted': post_id}, 200
 
 
