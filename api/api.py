@@ -1,3 +1,4 @@
+from datetime import datetime
 from os import getenv
 
 import psycopg2
@@ -34,11 +35,11 @@ def connect_pg():
     return pg_connection
 
 
-def get_pg():
-    """Open the database connection."""
+def get_pg_cursor():
+    """Get the cursor to execute SQL queries."""
     if not hasattr(g, "pg_connection"):
         g.pg_connection = connect_pg()
-    return g.pg_connection
+    return g.pg_connection.cursor()
 
 
 @app.teardown_appcontext
@@ -46,6 +47,29 @@ def close_pg(error):
     """Close the database connection."""
     if hasattr(g, "pg_connection"):
         g.pg_connection.close()
+
+
+@api.route('/post/<post_id>')
+class DataEntry(Resource):
+    def get(self, post_id):
+        """Get the Postgres record by id."""
+        pg_cursor = get_pg_cursor()
+        pg_cursor.execute('SELECT * FROM posts WHERE id = %s', [post_id])
+        row = pg_cursor.fetchone()
+        prepared_row = []
+        for element in row:
+            if isinstance(element, datetime):
+                prepared_row.append(str(element))
+            else:
+                prepared_row.append(element)
+        return prepared_row, 200
+
+    def delete(self, post_id):
+        """Delete the Postgres record and its ES document by id."""
+        pg_cursor = get_pg_cursor()
+        pg_cursor.execute('DELETE FROM posts WHERE id = %s', [post_id])
+        es.delete(index='posts', id=post_id)
+        return {'post deleted': post_id}, 200
 
 
 @api.route('/search/<query>')
@@ -64,23 +88,24 @@ class DataSearch(Resource):
         )
         if ids:
             pg_results = []
-            pg_connection = get_pg()
-            pg_cursor = pg_connection.cursor()
+            pg_cursor = get_pg_cursor()
             pg_cursor.execute(
                 'SELECT * FROM posts WHERE id IN %s ORDER BY created_date',
                 [ids],
             )
             pg_results = pg_cursor.fetchall()
             pg_headers = [x[0] for x in pg_cursor.description]
-            json_pg_results = []
+            prepared_pg_results = []
             for i in range(len(pg_results)):
-                json_pg_results.append(dict(zip(pg_headers, pg_results[i])))
-                json_pg_results[i]['created_date'] = str(
-                    json_pg_results[i]['created_date']
+                prepared_pg_results.append(
+                    dict(zip(pg_headers, pg_results[i]))
                 )
-            return json_pg_results
+                prepared_pg_results[i]['created_date'] = str(
+                    prepared_pg_results[i]['created_date']
+                )
+            return prepared_pg_results, 200
         else:
-            return []
+            return [], 200
 
 
 if __name__ == '__main__':
