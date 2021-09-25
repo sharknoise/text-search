@@ -49,7 +49,7 @@ def close_pg(error):
         g.pg_connection.close()
 
 
-@api.route('/post/<post_id>')
+@api.route('/posts/<post_id>')
 class DataEntry(Resource):
     def get(self, post_id):
         """Get the Postgres record by id."""
