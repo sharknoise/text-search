@@ -14,6 +14,7 @@ DATABASE = getenv('PG_DATABASE')
 USER = getenv('PG_USER')
 PASSWORD = getenv('PG_PASSWORD')
 ES_URL = getenv('ES_URL')
+DEBUG = getenv('DEBUG', False)
 
 app = Flask(__name__)
 api = Api(app)
@@ -60,13 +61,15 @@ class DataEntry(Resource):
         row = pg_cursor.fetchone()
         if row is None:
             return {'post not found': post_id}, 404
-        prepared_row = []
+        pg_values = []
         for element in row:
             if isinstance(element, datetime):
-                prepared_row.append(str(element))
+                pg_values.append(str(element))
             else:
-                prepared_row.append(element)
-        return prepared_row, 200
+                pg_values.append(element)
+        pg_headers = [x[0] for x in pg_cursor.description]
+        prepared_pg_results = dict(zip(pg_headers, pg_values))
+        return prepared_pg_results, 200
 
     def delete(self, post_id):
         """Delete the Postgres record and its ES document by id."""
@@ -76,7 +79,8 @@ class DataEntry(Resource):
             pg_cursor.execute('DELETE FROM posts WHERE id = %s', [post_id])
         except elasticsearch.exceptions.NotFoundError:
             return {'post not found': post_id}, 404
-        return {'post deleted': post_id}, 200
+        else:
+            return {'post deleted': post_id}, 200
 
 
 @api.route('/search/<query>')
@@ -116,4 +120,4 @@ class DataSearch(Resource):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=DEBUG)

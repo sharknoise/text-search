@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import ast
 from os import getenv
 
@@ -33,10 +34,9 @@ data = pandas.read_csv(CSV_SOURCE, header='infer')
 # prepare for inserting into PostgreSQL as a varchar array
 data['rubrics'] = data['rubrics'].apply(ast.literal_eval)
 
-# we want id column values to start from 1, not 0
+# dataframe ids start from 0, we want ids in db to start from 1
 data.index += 1
 
-# insert dataframe into the table
 for row in data.itertuples():
     pg_cursor.execute(
         '''
